@@ -12,21 +12,28 @@ import sys
 import time
 import yaml
 
+
+if sys.version_info[0] != 3: raise Exception("Must be using Python 3")
+
+global debugme
 debugme = False
+
 bs = bs4.BeautifulSoup
 pp = pprint.PrettyPrinter(indent=4, depth=6)
-
-tank = str(os.path.expanduser("~") + "/Games/Warcraft_Addons")
 
 theseargs = {}
 
 ###########################
-def dumpHelp():
+def dumpHelp(theseargs):
 
-    print("DUMP HELP")
+    if theseargs['error']:
+        print("")
+        print(theseargs['error'])
 
     print("")
-    print("-c --config\tYour config file.")
+    print("-c --config\tYour config file")
+    print("-d --debug\tVerbose output")
+    print("-h --help\tThis help message")
     print("")
     exit(1)
 ###########################
@@ -35,15 +42,13 @@ def dumpHelp():
 ###########################
 def parse_cmd_args(theseargs):
 
-    print("LEN: "+ str(len(theseargs['args'])))
+    global debugme
 
-    print("theseargs: " + str(theseargs))
-
-    debugme = True
+    theseargs['debugme'] = False
 
     if len(theseargs['args']) < 3: dumpHelp()
 
-    print("CMD: " + str(theseargs['args']))
+    if debugme: print("CMD: " + str(theseargs['args']))
 
     args = theseargs['args']
 
@@ -64,11 +69,11 @@ def parse_cmd_args(theseargs):
             if debugme: print("FOUND config: " + str(arg))
             theseargs['config_file'] = str(arg)
 
-
-    pp.pprint("theseargs: " + str(theseargs))
-    # print("config_file: " + str(theseargs['config_file']))
-
-    config_loaded = yaml.load(open(theseargs['config_file']))
+    if os.path.isfile(theseargs['config_file']):
+        config_loaded = yaml.load(open(theseargs['config_file']))
+    else:
+        theseargs['error'] = "Missing Config"
+        dumpHelp(theseargs)
 
     # print({"config_loaded: " + str(config_loaded)})
 
@@ -80,7 +85,9 @@ def parse_cmd_args(theseargs):
 ###########################
 def get_url(url):
     
-    print("get_url: "+ str(url))
+    global debugme
+
+    if debugme: print("get_url: "+ str(url))
 
     user_agent = {'user-agent': 'Mozilla/5.0 (Windows NT 13.3; rv:66.0)'}
 
@@ -93,7 +100,9 @@ def get_url(url):
 ###########################
 def build_remote_info(addon):
     
-    print("build_remote_info")
+    global debugme
+
+    if debugme: print("build_remote_info")
 
     # Open Communication
     response = get_url(addon.url_project)
@@ -128,7 +137,9 @@ def build_remote_info(addon):
 ###########################
 def get_remote_file_info(addon):
     
-    print("get_remote_file_info")
+    global debugme
+
+    if debugme: print("get_remote_file_info")
 
     # Get headers of addon zip file
     response_file = requests.get(addon.url_download, stream=True).headers
@@ -151,9 +162,12 @@ if __name__ == '__main__':
 
     config = parse_cmd_args(theseargs)
 
+    # if theseargs['debugme']: debugme = True
+
     curse_addons = config['addons']['curse']
 
-    print("curse_addons: " + str(curse_addons))
+    if debugme: print("curse_addons: " + str(curse_addons))
+    if debugme: print("addon_directory: " + str(config['addon_directory']))
 
     # exit()
 
@@ -164,8 +178,7 @@ if __name__ == '__main__':
 
         addon = CurseAddon()
 
-        # Addon tank
-        addon.tank = str(os.path.expanduser("~") + str(tank))
+        addon.tank = config['addon_directory']
         if debugme: print("tank: " + str(addon.tank))
 
         # Make URL for this addon
