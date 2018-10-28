@@ -1,5 +1,5 @@
 
-class CurseAddon():
+class CurseAddon:
 
     def __init__(self):
         self.url_base = "https://wow.curseforge.com/projects"

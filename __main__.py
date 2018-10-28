@@ -1,14 +1,16 @@
 
 # https://youtu.be/v5DDW5dyfyc?t=141
-from typing import List
 
 from library import CurseAddon
 
 import bs4
+import getopt
 import os
 import pprint
 import requests
+import sys
 import time
+import yaml
 
 debugme = False
 bs = bs4.BeautifulSoup
@@ -16,10 +18,64 @@ pp = pprint.PrettyPrinter(indent=4, depth=6)
 
 tank = str(os.path.expanduser("~") + "/Games/Warcraft_Addons")
 
-curse_addons: List[str] = [
-    "undermine-journal",
-    "gathermate2"
-    ]
+theseargs = {}
+
+###########################
+def dumpHelp():
+
+    print("DUMP HELP")
+
+    print("")
+    print("-c --config\tYour config file.")
+    print("")
+    exit(1)
+###########################
+
+
+###########################
+def parse_cmd_args(theseargs):
+
+    print("LEN: "+ str(len(theseargs['args'])))
+
+    print("theseargs: " + str(theseargs))
+
+    debugme = True
+
+    if len(theseargs['args']) < 3: dumpHelp()
+
+    print("CMD: " + str(theseargs['args']))
+
+    args = theseargs['args']
+
+    options, remainder = getopt.getopt(args[1:], 'c:hd', ['config=', 'help', 'debug'])
+
+    for opt, arg in options:
+
+        if opt in ('-h', '--help'):
+            if debugme: print("FOUND help: " + str(arg))
+            dumpHelp()
+
+        elif opt in ('-d', '--debug'):
+            if debugme: print("FOUND debug: ")
+            theseargs['debugme'] = True
+            debugme = True
+
+        if opt in ('-c', '--config'):
+            if debugme: print("FOUND config: " + str(arg))
+            theseargs['config_file'] = str(arg)
+
+
+    pp.pprint("theseargs: " + str(theseargs))
+    # print("config_file: " + str(theseargs['config_file']))
+
+    config_loaded = yaml.load(open(theseargs['config_file']))
+
+    # print({"config_loaded: " + str(config_loaded)})
+
+    return config_loaded
+
+###########################
+
 
 ###########################
 def get_url(url):
@@ -90,6 +146,17 @@ def get_remote_file_info(addon):
 
 ###########################
 if __name__ == '__main__':
+
+    theseargs['args'] = sys.argv
+
+    config = parse_cmd_args(theseargs)
+
+    curse_addons = config['addons']['curse']
+
+    print("curse_addons: " + str(curse_addons))
+
+    # exit()
+
     # print("loaded " + str(os.path.basename(__file__)))
 
     for ca in curse_addons:
