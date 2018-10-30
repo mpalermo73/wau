@@ -26,7 +26,7 @@ theseargs = {}
 ###########################
 def dumpHelp(theseargs):
 
-    if theseargs['error']:
+    if 'error' in theseargs and theseargs['error']:
         print("")
         print(theseargs['error'])
 
@@ -46,7 +46,7 @@ def parse_cmd_args(theseargs):
 
     theseargs['debugme'] = False
 
-    if len(theseargs['args']) < 3: dumpHelp()
+    if len(theseargs['args']) < 3: dumpHelp(theseargs)
 
     if debugme: print("CMD: " + str(theseargs['args']))
 
@@ -152,6 +152,12 @@ def get_remote_file_info(addon):
     addon.url_file_direct = requests.get(addon.url_download, stream=True).url
 
     return addon
+###########################
+
+
+###########################
+def check_for_update(addon):
+    print("check_for_update")
 ###########################
 
 
