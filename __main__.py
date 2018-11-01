@@ -156,8 +156,22 @@ def get_remote_file_info(addon):
 
 
 ###########################
-def check_for_update(addon):
+def get_local_version(addon):
     print("check_for_update")
+
+    stamp_file = str(addon.tank) +"/."+ str(addon.name)
+
+    if os.path.isfile(stamp_file):
+        print ("\""+ str(stamp_file) +"\" EXISTS")
+        print("MTIME: \"" + str(os.path.getmtime(stamp_file)))
+    else:
+        print("\"" + str(stamp_file) + "\" NOT FOUND")
+
+
+
+
+
+
 ###########################
 
 
@@ -184,8 +198,15 @@ if __name__ == '__main__':
 
         addon = CurseAddon()
 
+        addon.name = str(ca.lower())
+
         addon.tank = config['addon_directory']
         if debugme: print("tank: " + str(addon.tank))
+
+        # Get local addon info
+        get_local_version(addon)
+
+        quit()
 
         # Make URL for this addon
         addon.url_project = str(addon.url_base +"/"+ str(ca))
@@ -196,6 +217,7 @@ if __name__ == '__main__':
 
         # Get addon file info
         get_remote_file_info(addon)
+
 
         # Dump vars
         print(pp.pprint(str(vars(addon))))

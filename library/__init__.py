@@ -2,6 +2,7 @@
 class CurseAddon:
 
     def __init__(self):
+        self.name = None
         self.url_base = "https://wow.curseforge.com/projects"
         self.url_project = None
         self.url_real = None
