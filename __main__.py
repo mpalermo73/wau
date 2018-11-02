@@ -156,7 +156,7 @@ def get_remote_file_info(addon):
 
 
 ###########################
-def get_local_version(addon):
+def get_local_addon_info(addon):
     print("check_for_update")
 
     stamp_file = str(addon.tank) +"/."+ str(addon.name)
@@ -164,14 +164,10 @@ def get_local_version(addon):
     if os.path.isfile(stamp_file):
         print ("\""+ str(stamp_file) +"\" EXISTS")
         print("MTIME: \"" + str(os.path.getmtime(stamp_file)))
+        addon.date_local = int(os.path.getmtime(stamp_file))
     else:
         print("\"" + str(stamp_file) + "\" NOT FOUND")
-
-
-
-
-
-
+        addon.date_local = int(0)
 ###########################
 
 
@@ -204,9 +200,9 @@ if __name__ == '__main__':
         if debugme: print("tank: " + str(addon.tank))
 
         # Get local addon info
-        get_local_version(addon)
+        get_local_addon_info(addon)
 
-        quit()
+        # quit()
 
         # Make URL for this addon
         addon.url_project = str(addon.url_base +"/"+ str(ca))
@@ -218,6 +214,11 @@ if __name__ == '__main__':
         # Get addon file info
         get_remote_file_info(addon)
 
+        # Compare times
+        if addon.date_remote > addon.date_local:
+            print("UPDATE: "+ str(addon.title) +" - "+ str(addon.date_remote) +" > "+ str(addon.date_local))
+        else:
+            print("CURRENT: " + str(addon.title) + " - " + str(addon.date_remote) + " > " + str(addon.date_local))
 
         # Dump vars
         print(pp.pprint(str(vars(addon))))

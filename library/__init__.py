@@ -13,3 +13,5 @@ class CurseAddon:
         self.url_file_direct = None
         self.date_remote = None
         self.size_remote = None
+        self.date_local = None
+        self.size_local = None
