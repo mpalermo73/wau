@@ -240,8 +240,10 @@ if __name__ == '__main__':
     config = parse_cmd_args(theseargs)
 
     curse_addons = config['addons']['curse']
+    other_addons = config['addons']['other']
 
     if debugme: print("curse_addons: " + str(curse_addons))
+    if debugme: print("other_addons: " + str(other_addons))
     if debugme: print("addon_directory: " + str(config['addon_directory']))
 
     for ca in curse_addons:
