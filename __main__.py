@@ -11,7 +11,9 @@ import requests
 import sys
 import time
 import yaml
-
+import inspect
+import zipfile
+import io
 
 if sys.version_info[0] != 3: raise Exception("Must be using Python 3")
 
@@ -40,9 +42,17 @@ def dumpHelp(theseargs):
 
 
 ###########################
+def human_time(epoch):
+    return str(time.strftime("%Y-%m-%d, %H:%M:%S", time.localtime(epoch)))
+###########################
+
+
+###########################
 def parse_cmd_args(theseargs):
 
     global debugme
+
+    if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
 
     theseargs['debugme'] = False
 
@@ -84,8 +94,10 @@ def parse_cmd_args(theseargs):
 
 ###########################
 def get_url(url):
-    
+
     global debugme
+
+    if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
 
     if debugme: print("get_url: "+ str(url))
 
@@ -101,6 +113,8 @@ def get_url(url):
 def build_remote_info(addon):
     
     global debugme
+
+    if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
 
     if debugme: print("build_remote_info")
 
@@ -139,16 +153,20 @@ def get_remote_file_info(addon):
     
     global debugme
 
+    if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
+
     if debugme: print("get_remote_file_info")
 
     # Get headers of addon zip file
     response_file = requests.get(addon.url_download, stream=True).headers
 
+    # print(str(response_file))
+
     # Thu, 14 Dec 2017 07:31:54 GMT
     file_date_format = '%a, %d %b %Y %H:%M:%S %Z'
 
     addon.size_remote = response_file['Content-Length']
-    addon.date_remote = int(time.mktime(time.strptime(response_file['Last-Modified'], file_date_format)))
+    addon.date_remote_utc = int(time.mktime(time.strptime(response_file['Last-Modified'], file_date_format)))
     addon.url_file_direct = requests.get(addon.url_download, stream=True).url
 
     return addon
@@ -157,17 +175,60 @@ def get_remote_file_info(addon):
 
 ###########################
 def get_local_addon_info(addon):
-    print("check_for_update")
 
-    stamp_file = str(addon.tank) +"/."+ str(addon.name)
+    global debugme
 
-    if os.path.isfile(stamp_file):
-        print ("\""+ str(stamp_file) +"\" EXISTS")
-        print("MTIME: \"" + str(os.path.getmtime(stamp_file)))
-        addon.date_local = int(os.path.getmtime(stamp_file))
+    if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
+
+    # stamp_file = str(addon.tank) +"/."+ str(addon.name)
+
+    if os.path.isfile(addon.stamp_file):
+        addon.date_local = int(os.path.getmtime(addon.stamp_file))
+        addon.date_local_utc = addon.date_local + int(time.timezone)
+        print ("stamp_file: \""+ str(addon.stamp_file) +"\" EXISTS")
     else:
-        print("\"" + str(stamp_file) + "\" NOT FOUND")
         addon.date_local = int(0)
+        addon.date_local_utc = int(0)
+        print("stamp_file: \"" + str(addon.stamp_file) + "\" NOT FOUND")
+
+    # print("MTIME: \"" + str(addon.date_local))
+###########################
+
+
+###########################
+def update_stamp_file(addon, zip_contents):
+
+    global debugme
+
+    if debugme: print("DEF: " + str(inspect.stack()[0][3]))
+
+    fh = open(addon.stamp_file, 'w')
+
+    fh.writelines(addon.version +"\n")
+
+    with zipfile.ZipFile(zip_contents, 'r') as zip:
+        for F in zip.namelist():
+            fh.writelines(F +"\n")
+
+    fh.close()
+###########################
+
+
+###########################
+def get_addon_package(addon):
+
+    global debugme
+
+    if debugme: print("DEF: " + str(inspect.stack()[0][3]))
+
+    request = requests.get(addon.url_file_direct)
+    addon_zip = zipfile.ZipFile(io.BytesIO(request.content))
+    addon_zip.extractall(path=str(addon.tank))
+
+    update_stamp_file(addon, io.BytesIO(request.content))
+
+    addon_zip = None
+    request = None
 ###########################
 
 
@@ -178,16 +239,10 @@ if __name__ == '__main__':
 
     config = parse_cmd_args(theseargs)
 
-    # if theseargs['debugme']: debugme = True
-
     curse_addons = config['addons']['curse']
 
     if debugme: print("curse_addons: " + str(curse_addons))
     if debugme: print("addon_directory: " + str(config['addon_directory']))
-
-    # exit()
-
-    # print("loaded " + str(os.path.basename(__file__)))
 
     for ca in curse_addons:
         if debugme: print("ca: " + str(ca))
@@ -198,6 +253,9 @@ if __name__ == '__main__':
 
         addon.tank = config['addon_directory']
         if debugme: print("tank: " + str(addon.tank))
+
+        addon.stamp_file = str(addon.tank) + "/." + str(addon.name)
+        if debugme: print("tank: " + str(addon.stamp_file))
 
         # Get local addon info
         get_local_addon_info(addon)
@@ -214,14 +272,17 @@ if __name__ == '__main__':
         # Get addon file info
         get_remote_file_info(addon)
 
+        print(pp.pprint(str(vars(addon))))
+
         # Compare times
-        if addon.date_remote > addon.date_local:
-            print("UPDATE: "+ str(addon.title) +" - "+ str(addon.date_remote) +" > "+ str(addon.date_local))
+        if addon.date_remote_utc > addon.date_local_utc:
+            print("UPDATE: "+ str(addon.title) +" - "+ str(human_time(addon.date_remote_utc)) +" > "+ str(human_time(addon.date_local_utc)))
+            get_addon_package(addon)
         else:
-            print("CURRENT: " + str(addon.title) + " - " + str(addon.date_remote) + " > " + str(addon.date_local))
+            print("CURRENT: " + str(addon.title) + " - " + str(human_time(addon.date_remote_utc)) + " <= " + str(human_time(addon.date_local_utc)))
 
         # Dump vars
-        print(pp.pprint(str(vars(addon))))
+        # print(pp.pprint(str(vars(addon))))
 
         print("=========")
 
