@@ -15,9 +15,9 @@ import inspect
 import zipfile
 import io
 
-if sys.version_info[0] != 3: raise Exception("Must be using Python 3")
+if sys.version_info[0] != 3:
+    raise Exception("Must be using Python 3")
 
-global debugme
 debugme = False
 
 bs = bs4.BeautifulSoup
@@ -26,7 +26,7 @@ pp = pprint.PrettyPrinter(indent=4, depth=6)
 theseargs = {}
 
 ###########################
-def dumpHelp(theseargs):
+def dump_help(theseargs):
 
     if 'error' in theseargs and theseargs['error']:
         print("")
@@ -56,7 +56,7 @@ def parse_cmd_args(theseargs):
 
     theseargs['debugme'] = False
 
-    if len(theseargs['args']) < 3: dumpHelp(theseargs)
+    if len(theseargs['args']) < 3: dump_help(theseargs)
 
     if debugme: print("CMD: " + str(theseargs['args']))
 
@@ -68,7 +68,7 @@ def parse_cmd_args(theseargs):
 
         if opt in ('-h', '--help'):
             if debugme: print("FOUND help: " + str(arg))
-            dumpHelp()
+            dump_help(theseargs)
 
         elif opt in ('-d', '--debug'):
             if debugme: print("FOUND debug: ")
@@ -83,7 +83,8 @@ def parse_cmd_args(theseargs):
         config_loaded = yaml.load(open(theseargs['config_file']))
     else:
         theseargs['error'] = "Missing Config"
-        dumpHelp(theseargs)
+        config_loaded = False
+        dump_help(theseargs)
 
     # print({"config_loaded: " + str(config_loaded)})
 
@@ -110,20 +111,36 @@ def get_url(url):
 
 
 ###########################
-def build_remote_info(addon):
-    
+def build_remote_info():
+
     global debugme
 
     if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
 
     if debugme: print("build_remote_info")
 
+    user_agent = {'user-agent': 'Mozilla/5.0 (Windows NT 13.3; rv:66.0)'}
+
     # Open Communication
-    response = get_url(addon.url_project)
+    # response = get_url(addon.url_project)
+    response = requests.get(addon.url_project, headers=user_agent)
+    # response = requests.get(addon.url_project, headers=user_agent, allow_redirects=False)
+    #
+    # if "Location" in response.headers:
+    #     print("REDIRECT: "+ str(response.headers['Location']))
+    #     addon.url_real = response.headers['Location']
+    # else:
+    #     print("NORMAL: "+ str(url))
+    #     addon.url_real = addon.url_project
+
+    response.close()
+
 
     # Some things still redirect to WoWAce
     addon.url_real = response.url
     if debugme: print("url_real: " + str(addon.url_real))
+
+
 
     # Get Raw HTML
     html_raw = bs(response.text, 'html.parser')
@@ -144,13 +161,13 @@ def build_remote_info(addon):
     addon.url_download = str(addon.url_real + "/" + '/'.join(s1[0]['href'].split('/')[3:]))
     if debugme: print("addon.url_download: " + str(addon.url_download))
 
-    return addon
+    # return addon
 ###########################
 
 
 ###########################
-def get_remote_file_info(addon):
-    
+def get_remote_file_info():
+
     global debugme
 
     if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
@@ -169,53 +186,63 @@ def get_remote_file_info(addon):
     addon.date_remote_utc = int(time.mktime(time.strptime(response_file['Last-Modified'], file_date_format)))
     addon.url_file_direct = requests.get(addon.url_download, stream=True).url
 
-    return addon
+    # return addon
 ###########################
 
 
 ###########################
-def get_local_addon_info(addon):
+def get_local_addon_info():
 
     global debugme
 
     if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
 
-    # stamp_file = str(addon.tank) +"/."+ str(addon.name)
-
     if os.path.isfile(addon.stamp_file):
         addon.date_local = int(os.path.getmtime(addon.stamp_file))
         addon.date_local_utc = addon.date_local + int(time.timezone)
-        print ("stamp_file: \""+ str(addon.stamp_file) +"\" EXISTS")
+        if debugme: print ("stamp_file: \""+ str(addon.stamp_file) +"\" EXISTS")
     else:
         addon.date_local = int(0)
         addon.date_local_utc = int(0)
-        print("stamp_file: \"" + str(addon.stamp_file) + "\" NOT FOUND")
+        if debugme: print("stamp_file: \"" + str(addon.stamp_file) + "\" NOT FOUND")
 
     # print("MTIME: \"" + str(addon.date_local))
 ###########################
 
 
 ###########################
-def update_stamp_file(addon, zip_contents):
+def update_time_stamps(zip_contents):
 
     global debugme
 
     if debugme: print("DEF: " + str(inspect.stack()[0][3]))
 
+    dirs = []
+
     fh = open(addon.stamp_file, 'w')
 
     fh.writelines(addon.version +"\n")
 
-    with zipfile.ZipFile(zip_contents, 'r') as zip:
-        for F in zip.namelist():
+    with zipfile.ZipFile(zip_contents, 'r') as z:
+        for F in z.namelist():
             fh.writelines(F +"\n")
 
+            if F.split('/')[0] not in dirs:
+                dirs.append(str(F.split('/')[0]))
+
     fh.close()
+
+    os.utime(addon.stamp_file, (addon.date_remote_utc, addon.date_remote_utc))
+    if debugme: print("STAMPED: " + str(addon.stamp_file))
+
+    for dir in dirs:
+        os.utime(addon.tank +"/"+ dir, (addon.date_remote_utc, addon.date_remote_utc))
+        if debugme: print("STAMPED: "+ str(addon.tank +"/"+ dir))
 ###########################
 
 
 ###########################
-def get_addon_package(addon):
+def get_addon_package():
 
     global debugme
 
@@ -225,10 +252,7 @@ def get_addon_package(addon):
     addon_zip = zipfile.ZipFile(io.BytesIO(request.content))
     addon_zip.extractall(path=str(addon.tank))
 
-    update_stamp_file(addon, io.BytesIO(request.content))
-
-    addon_zip = None
-    request = None
+    update_time_stamps(io.BytesIO(request.content))
 ###########################
 
 
@@ -249,42 +273,27 @@ if __name__ == '__main__':
     for ca in curse_addons:
         if debugme: print("ca: " + str(ca))
 
-        addon = CurseAddon()
+        # init this addon
+        addon = CurseAddon(config, ca)
 
-        addon.name = str(ca.lower())
+        # Get any local addon info
+        get_local_addon_info()
 
-        addon.tank = config['addon_directory']
-        if debugme: print("tank: " + str(addon.tank))
-
-        addon.stamp_file = str(addon.tank) + "/." + str(addon.name)
-        if debugme: print("tank: " + str(addon.stamp_file))
-
-        # Get local addon info
-        get_local_addon_info(addon)
-
-        # quit()
-
-        # Make URL for this addon
-        addon.url_project = str(addon.url_base +"/"+ str(ca))
-        if debugme: print("url_project: " + str(addon.url_project))
-
-        # Get addon info
-        addon = build_remote_info(addon)
+        # Get remote addon info
+        build_remote_info()
 
         # Get addon file info
-        get_remote_file_info(addon)
+        get_remote_file_info()
 
-        print(pp.pprint(str(vars(addon))))
-
-        # Compare times
-        if addon.date_remote_utc > addon.date_local_utc:
-            print("UPDATE: "+ str(addon.title) +" - "+ str(human_time(addon.date_remote_utc)) +" > "+ str(human_time(addon.date_local_utc)))
-            get_addon_package(addon)
+        # check for freshness
+        if addon.check_freshness():
+            print("UPDATE: "+ str(addon.title) +" - remote: "+ str(human_time(addon.date_remote_utc)) +" > local: "+ str(human_time(addon.date_local_utc)))
+            get_addon_package()
         else:
-            print("CURRENT: " + str(addon.title) + " - " + str(human_time(addon.date_remote_utc)) + " <= " + str(human_time(addon.date_local_utc)))
+            print("CURRENT: " + str(addon.title) + " - remote: " + str(human_time(addon.date_remote_utc)) + " <= local: " + str(human_time(addon.date_local_utc)))
 
         # Dump vars
-        # print(pp.pprint(str(vars(addon))))
+        print(pp.pprint(str(vars(addon))))
 
         print("=========")
 
