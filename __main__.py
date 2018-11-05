@@ -270,7 +270,7 @@ if __name__ == '__main__':
     if debugme: print("other_addons: " + str(other_addons))
     if debugme: print("addon_directory: " + str(config['addon_directory']))
 
-    for ca in curse_addons:
+    for ca in sorted(curse_addons):
         if debugme: print("ca: " + str(ca))
 
         # init this addon
