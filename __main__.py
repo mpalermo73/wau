@@ -263,8 +263,19 @@ if __name__ == '__main__':
 
     config = parse_cmd_args(theseargs)
 
-    curse_addons = config['addons']['curse']
-    other_addons = config['addons']['other']
+    if "addons" in config.keys() and "curse" in config['addons'].keys():
+
+        if debugme:
+            print("MAIN: "+ str(config.keys()))
+            print("CURSE: "+ str(config['addons'].keys()))
+
+        curse_addons = config['addons']['curse']
+        other_addons = config['addons']['other']
+    else:
+        print("CONFIG BUSTED")
+        print("MAIN: "+ str(config.keys()))
+        print("CURSE: "+ str(config['addons'].keys()))
+        exit(1)
 
     if debugme: print("curse_addons: " + str(curse_addons))
     if debugme: print("other_addons: " + str(other_addons))
