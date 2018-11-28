@@ -62,7 +62,11 @@ def parse_cmd_args(args):
 
     a = args['args']
 
-    options, remainder = getopt.getopt(a[1:], 'c:hd', ['config=', 'help', 'debug'])
+    try:
+        options, remainder = getopt.getopt(a[1:], 'c:hd', ['config=', 'help', 'debug'])
+    except:
+        args['error'] = "Bad commandline option"
+        dump_help(args)
 
     for opt, arg in options:
 
