@@ -26,11 +26,11 @@ pp = pprint.PrettyPrinter(indent=4, depth=6)
 theseargs = {}
 
 ###########################
-def dump_help(theseargs):
+def dump_help(args):
 
-    if 'error' in theseargs and theseargs['error']:
+    if 'error' in args and args['error']:
         print("")
-        print(theseargs['error'])
+        print(args['error'])
 
     print("")
     print("-c --config\tYour config file")
@@ -48,65 +48,48 @@ def human_time(epoch):
 
 
 ###########################
-def parse_cmd_args(theseargs):
+def parse_cmd_args(args):
 
     global debugme
 
     if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
 
-    theseargs['debugme'] = False
+    args['debugme'] = False
 
-    if len(theseargs['args']) < 3: dump_help(theseargs)
+    if len(args['args']) < 3: dump_help(args)
 
-    if debugme: print("CMD: " + str(theseargs['args']))
+    if debugme: print("CMD: " + str(args['args']))
 
-    args = theseargs['args']
+    a = args['args']
 
-    options, remainder = getopt.getopt(args[1:], 'c:hd', ['config=', 'help', 'debug'])
+    options, remainder = getopt.getopt(a[1:], 'c:hd', ['config=', 'help', 'debug'])
 
     for opt, arg in options:
 
         if opt in ('-h', '--help'):
             if debugme: print("FOUND help: " + str(arg))
-            dump_help(theseargs)
+            dump_help(args)
 
         elif opt in ('-d', '--debug'):
             if debugme: print("FOUND debug: ")
-            theseargs['debugme'] = True
+            args['debugme'] = True
             debugme = True
 
         if opt in ('-c', '--config'):
             if debugme: print("FOUND config: " + str(arg))
-            theseargs['config_file'] = str(arg)
+            args['config_file'] = str(arg)
 
-    if os.path.isfile(theseargs['config_file']):
-        config_loaded = yaml.load(open(theseargs['config_file']))
+    if os.path.isfile(args['config_file']):
+        config_loaded = yaml.load(open(args['config_file']))
     else:
-        theseargs['error'] = "Missing Config"
+        args['error'] = "Missing Config"
         config_loaded = False
-        dump_help(theseargs)
+        dump_help(args)
 
     # print({"config_loaded: " + str(config_loaded)})
 
     return config_loaded
 
-###########################
-
-
-###########################
-def get_url(url):
-
-    global debugme
-
-    if debugme: print("DEF: "+ str(inspect.stack()[0][3]))
-
-    if debugme: print("get_url: "+ str(url))
-
-    user_agent = {'user-agent': 'Mozilla/5.0 (Windows NT 13.3; rv:66.0)'}
-
-    response = requests.get(url, headers=user_agent)
-    response.close()
-    return response
 ###########################
 
 
@@ -122,32 +105,18 @@ def build_remote_info():
     user_agent = {'user-agent': 'Mozilla/5.0 (Windows NT 13.3; rv:66.0)'}
 
     # Open Communication
-    # response = get_url(addon.url_project)
-    response = requests.get(addon.url_project, headers=user_agent)
-    # response = requests.get(addon.url_project, headers=user_agent, allow_redirects=False)
-    #
-    # if "Location" in response.headers:
-    #     print("REDIRECT: "+ str(response.headers['Location']))
-    #     addon.url_real = response.headers['Location']
-    # else:
-    #     print("NORMAL: "+ str(url))
-    #     addon.url_real = addon.url_project
-
-    response.close()
-
+    # response = requests.get(addon.url_project, headers=user_agent)
+    response = requests.get(addon.url_project, headers=user_agent, allow_redirects=True, stream=True)
 
     # Some things still redirect to WoWAce
     addon.url_real = response.url
     if debugme: print("url_real: " + str(addon.url_real))
-
-
 
     # Get Raw HTML
     html_raw = bs(response.text, 'html.parser')
 
     # Pretty Title
     html_title_raw = str(html_raw.title.string)
-    # print("html_title_raw: " + str(html_title_raw.split(' - ')[1]))
     addon.title = str(html_title_raw.split(' - ')[1])
     if debugme: print("title: " + str(addon.title))
 
