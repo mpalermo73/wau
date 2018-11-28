@@ -235,9 +235,9 @@ def update_time_stamps(zip_contents):
     os.utime(addon.stamp_file, (addon.date_remote_utc, addon.date_remote_utc))
     if debugme: print("STAMPED: " + str(addon.stamp_file))
 
-    for dir in dirs:
-        os.utime(addon.tank +"/"+ dir, (addon.date_remote_utc, addon.date_remote_utc))
-        if debugme: print("STAMPED: "+ str(addon.tank +"/"+ dir))
+    for d in dirs:
+        os.utime(addon.tank +"/"+ d, (addon.date_remote_utc, addon.date_remote_utc))
+        if debugme: print("STAMPED: "+ str(addon.tank +"/"+ d))
 ###########################
 
 
